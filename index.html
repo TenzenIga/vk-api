@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>VK API test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<style>
+    *{
+        box-sizing: border-box;
+        margin: 0
+    }
+    #button{
+        padding: 10px;
+        background: #4a76a8;
+        border: none;
+        color: #fff;
+        margin: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease; 
+    }
+    #button:hover{
+        background:#224b7a;
+    }
+    .heading{
+        padding: 10px;
+    }
+    .sub_heading{
+        flex-basis:100%;
+        padding:  0 10px;
+    }
+.friends_container{
+    display: flex;
+    justify-content: flex-start;
+    align-items:flex-start;
+    flex-wrap: wrap;
+}
+.friend{
+    padding: 10px;
+    text-decoration: none;
+    color: #000;
+    text-align: center;
+}
+</style>
+<body>
+    <button id="button">Авторизация</button>
+    <div class="friends_container"></div>
+</body>
+
+<script>
+
+const redirect_url = 'http://127.0.0.1:5500/index.html'
+const id = 	6899996; // app id
+const REG_EXP = /\#(?:access_token)\=([\S\s]*?)\&/; // reg_exp to check url for token
+let token = '';
+
+$("#button").on('click',openUrl);
+
+if(localStorage.getItem('token')){
+    getUserProfile(localStorage.getItem('token')); //make api call  
+    showFriends(localStorage.getItem('token'))
+    hideButton()
+}else if(REG_EXP.test(window.location.href)){ //check current url for token
+    token = window.location.href.match(REG_EXP)[1];
+    localStorage.setItem('token', token)  //save it to local storage
+    getUserProfile(token);  //make api call   
+    showFriends(token);
+    hideButton()
+}
+
+
+
+function openUrl(){
+   window.location.href = `https://oauth.vk.com/authorize?client_id=${id}&display=page&redirect_uri=${redirect_url}&scope=friends&response_type=token&v=5.52`;
+}
+
+
+ // use jquery ajax call for jsonp as a workaround for CORS error
+function getUserProfile(token){
+    $.getJSON("https://api.vk.com/method/users.get?fields=nickname&callback=?&v=5.52&access_token=" + token, function(json){ //get user name 
+       $('.friends_container').before(`<h3 class="heading">${json.response[0].first_name} ${json.response[0].last_name}</h3>`)
+    })
+}
+
+function showFriends(token) { 
+    $.getJSON("https://api.vk.com/method/friends.get?order=random&count=5&fields=nickname,photo_100&callback=?&v=5.52&access_token=" + token, function(json){ //get 5 friends
+        $('.friends_container').prepend("<h4 class='sub_heading'>5 случайных друзей</h4>");       
+        
+        json.response.items.forEach(item => {
+            $(".friends_container").append(`<a href=https://vk.com/id${item.id} class='friend'>
+                <img src=${item.photo_100} />
+                <p class='name'>${item.first_name}</p>
+                <p class='surname'>${item.last_name}</p>
+                </a>`)            
+        });       
+    });
+}
+
+function hideButton(){
+    $('#button').hide();
+}
+</script>
+
+</html>
